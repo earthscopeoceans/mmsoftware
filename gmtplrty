@@ -1,0 +1,45 @@
+#! /bin/csh
+
+# plots radiation pattern in polarity.xy (from pltamp.f90)
+# if given without arguments, tries to read lat/lon from file <quake>
+# in the current directory
+
+# The files *.paths.xy, *.delays.xy and stationtxt are all created by
+# program rdapf.f90 (i.e. *after* you have picked delays.
+
+# Before picking, you can create paths.xy and stationtxt with listsac.f90
+
+if($#argv<1) then
+  if(-e quake) then             # read lat lon from quake
+    set a = `head -n 3 quake | tail -n 1`
+    set lat = $a[1]
+    set lon = $a[2]
+  else
+    echo Usage "gmtplrty [lat lon]"
+    echo where lat lon are epicentre coordinates
+    exit
+  endif
+else
+  set lat = $argv[1]
+  set lon = $argv[2]
+endif  
+
+gmt gmtset PROJ_LENGTH_UNIT cm
+gmt gmtset PS_MEDIA a4
+gmt gmtset FONT_LABEL 12 FONT_TITLE 14
+rm -f polP.ps
+
+gmt makecpt -Cpolar -D -I -Z -T-1/1/0.1 > v.cpt
+set R = `gmt gmtinfo -If5 polarity.xy`
+echo R is $R
+
+gmt pscoast -JM9 $R -W0.5p,darkgreen -P -Ba15f5g15eWNs -K > polP.ps
+foreach pathfile (*paths.xy)
+  gmt psxy $pathfile -R -J -W1p -K -O >> polP.ps
+end  
+gmt psxy polarity.xy -J -R -Sc0.2 -Cv.cpt -K -O >> polP.ps
+echo $lon $lat | psxy -R -J -Sa0.5 -Gdarkred -K -O >> polP.ps
+gmt psscale -D4/-0.5/4/0.3h -Ba0.5f0.1 -Cv.cpt -O >> polP.ps
+gmt psconvert polP.ps -A -P -Tf
+rm polP.ps
+open -a "Preview" polP.pdf
