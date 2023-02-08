@@ -1,0 +1,48 @@
+#! /bin/csh
+
+# plots radiation pattern in smallPrad.xy (from pltamp.f90)
+# if given without arguments, tries to read lat/lon from file <quake>
+# in the current directory
+
+# The files paths.xy, delays.xy and stationtxt are all created by
+# program rdapf.f90 (i.e. *after* you have picked delays.
+# Before picking, you can create paths.xy and stationtxt with listsac.f90
+
+if($#argv<1) then
+  if(-e quake) then             # read lat lon from quake
+    set a = `head -n 3 quake | tail -n 1`
+    set lat = $a[1]
+    set lon = $a[2]
+  else
+    echo Usage gmtrad lat lon
+    echo where lat lon are epicentre coordinates
+    exit
+  endif
+else
+  set lat = $argv[1]
+  set lon = $argv[2]
+endif  
+
+gmt gmtset PROJ_LENGTH_UNIT cm
+gmt gmtset PS_MEDIA a4
+gmt gmtset FONT_LABEL 12 FONT_TITLE 14
+rm -f smallradP.ps
+
+gmt makecpt -Cpolar -D -I -Z -T-1/1/0.1 > v.cpt
+set R = `gmt gmtinfo -I5 smallPrad.xy`
+echo R is $R
+
+gmt psxy smallPrad.xy -JM9 $R -Ss0.5 -W+1p -Cv.cpt -P -K -Ba15f5g15eWNs > smallradP.ps
+gmt pscoast -R -JM -Di -W0.5p,darkgreen -K -O >> smallradP.ps
+if(-e paths.xy) then
+  gmt psxy paths.xy -R -JM -W1p -K -O >> smallradP.ps
+endif  
+if(-e stationtxt) then
+  gmt pstext stationtxt -R -JM -F+a0+jTL+f6p,Helvetica -K -O >> smallradP.ps
+endif  
+echo $lon $lat | psxy -R -JM -Sa0.5 -Gdarkred -K -O >> smallradP.ps
+gmt psscale -D4/-0.5/4/0.3h -Ba0.5f0.1 -Cv.cpt -O >> smallradP.ps
+# gmt ps2raster -A -Tf -P smallradP.ps
+gmt psconvert smallradP.ps -A -P -Tf
+rm smallradP.ps
+open -a "Preview" smallradP.pdf
